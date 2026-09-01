@@ -22,7 +22,6 @@ npx skills add askprateek/skills/<skill-name>
 
 | Skill | Description |
 | --- | --- |
-| [`hello-world`](skills/hello-world/SKILL.md) | Example skill demonstrating the SKILL.md format. |
 | [`herdr-orchestration`](skills/herdr-orchestration/SKILL.md) | Standard operating procedure for orchestrating OMP agents through herdr: hierarchy, model gate, worktree topology, checker pattern, shared-file ownership, wave execution, delivery gate, and hard rules. |
 
 <!-- Add new rows above this line as skills are added. -->

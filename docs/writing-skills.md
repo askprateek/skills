@@ -37,4 +37,4 @@ skills/my-skill/
     examples.md
 ```
 
-See [`skills/hello-world/SKILL.md`](../skills/hello-world/SKILL.md) for a minimal working example.
+See [`skills/herdr-orchestration/SKILL.md`](../skills/herdr-orchestration/SKILL.md) for a working example.
