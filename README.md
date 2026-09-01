@@ -32,6 +32,18 @@ npx skills add askprateek/skills/herdr-orchestration
 
 [Full docs →](skills/herdr-orchestration/SKILL.md)
 
+### orca-orchestration
+
+Orchestrate multiple AI agents in parallel through Orca for multi-worker or multi-file coding tasks, parallel implementation waves, and isolated worktrees.
+
+**What you get:** the full Main → Admin → Worker → Checker hierarchy built on Orca's Run/Task/Dispatch primitives, skill-local `scripts/` wrappers for worktree/terminal orchestration, the dual sentinel + native `worker_done` signal workers use to report status, and the hard rules that keep multi-agent runs safe (non-blocking completion via background Checkers, no `check --wait`, no merges to main without approval).
+
+```bash
+npx skills add askprateek/skills/orca-orchestration
+```
+
+[Full docs →](skills/orca-orchestration/SKILL.md)
+
 ## Repo layout
 
 ```
