@@ -1,6 +1,6 @@
 ---
 name: herdr-orchestration
-description: "Standard operating procedure for orchestrating OMP agents through herdr: hierarchy (Main/Admin/Workers/Checkers), model gate, worktree topology, checker pattern, shared-file ownership, wave execution, delivery gate, and hard rules."
+description: "Standard operating procedure for orchestrating multiple AI agents in parallel through herdr. Use for multi-worker or multi-file coding tasks: coordinating the Main/Admin/Worker/Checker hierarchy, spawning workers in isolated worktrees and panes, and running parallel implementation waves with checker verification and delivery gates."
 ---
 
 # Standard Herdr Orchestration
