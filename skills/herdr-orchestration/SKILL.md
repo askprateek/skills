@@ -1,12 +1,9 @@
 ---
 name: herdr-orchestration
-description: "Standard operating procedure for orchestrating multiple AI agents in parallel through herdr. Use for multi-worker or multi-file coding tasks: coordinating the Main/Admin/Worker/Checker hierarchy, spawning workers in isolated worktrees and panes, and running parallel implementation waves with checker verification and delivery gates."
+description: "Orchestrate multiple AI agents in parallel through herdr. Use for multi-worker or multi-file coding tasks, parallel implementation waves, isolated worktrees, or when the user mentions herdr or multi-agent orchestration."
 ---
 
 # Standard Herdr Orchestration
-
-Use for multi-worker implementation, parallel waves, isolated branches, or any
-request to orchestrate OMP agents through herdr.
 
 This root file holds what every role shares: the hierarchy, the scripts, the
 herdr CLI reference, the sentinel vocabulary, and the hard rules. Read it first,
@@ -22,19 +19,11 @@ then read your role file:
 
 Main → Admin → Workers → Admin → Main. No layer skips.
 
-- **Main** — user-facing agent. Stays responsive. Owns scope and product
-  decisions. Routes all implementation instructions to Admin. Never executes
-  code or edits source files unless user explicitly asks.
-- **Admin** — persistent orchestrator in a pane on the main branch (no
-  worktree). Plans waves, launches workers, runs checkers, merges into the
-  integration branch, verifies, updates GitHub, cleans worktrees, reports
-  milestones to Main. Never edits source files.
-- **Implementation worker** — one worktree, branch, pane, bounded task slice.
-  Works solo; no subagents.
-- **Review worker** — read-only, no new worktree. Posts findings; no
-  repository edits.
-- **Checker** — one `checker` agent per active worker, owned by Admin. Observes
-  only; never decides or edits.
+- **Main** — user-facing; routes instructions to Admin. Full role: `roles/main.md`.
+- **Admin** — orchestrator on the main branch, no worktree; dispatches workers, reports to Main. Full role: `roles/admin.md`.
+- **Implementation worker** — one worktree/branch/pane; reports to Admin. Full role: `roles/worker.md`.
+- **Review worker** — read-only, no worktree; reports to Admin. Full role: `roles/worker.md`.
+- **Checker** — one per active worker, owned by Admin; observes only, reports to Admin.
 
 ## Scripts (prefer these over raw herdr)
 
@@ -59,7 +48,7 @@ S=<skill-root>/scripts
 | `herdr-panes` | list panes as a table | `herdr-panes [tab_id\|workspace_id]` |
 
 `herdr-worker` and `herdr-launch` print `PANE=… …` as their last line — capture
-the pane id from it. The raw CLI reference below is the fallback for the long tail.
+the pane id from it. The raw CLI reference (`skill://herdr-orchestration/references/cli.md`) is the fallback for the long tail.
 
 `herdr-worker` and `herdr-launch` place the agent under the **project's own
 workspace** (worker: `pane move` into it, auto-closing the throwaway per-worktree
@@ -67,44 +56,16 @@ workspace; launch: `tab create --workspace` derived from the cwd) and title its
 tab with the `label` — so agents appear named alongside the project, never
 stranded in the orchestration workspace. Always pass a meaningful label.
 
-**No `agent start` needed:** herdr detects the OMP agent from pane content, so a
-plain pane (`worktree create` root, `tab create` root, or `pane split`) plus
-`pane run "omp --model X"` is fully tracked and observable via `herdr agent
-read`. `agent start` only bundles pane-create + launch + an optional `--name`;
-the scripts use the uniform pane-run path everywhere.
+**No `agent start` needed:** herdr detects the OMP agent from pane content, so
+launching `omp --model X` via `herdr pane run <pane_id> "omp --model <model>"`
+INTO an existing pane (the `worktree create` root, `tab create` root, or a
+fresh `pane split`) is fully tracked and observable via `herdr agent read`.
+`agent start` only bundles pane-create + launch + an optional `--name` — and
+`agent start --tab` adds an unwanted second pane beside the root. The
+`herdr-launch` / `herdr-worker` scripts already do this correctly; prefer them
+over raw `agent start`.
 
-## Herdr CLI reference
-
-Ground the exact command surface before issuing herdr commands — do not guess
-flags. `herdr <group> --help` is authoritative when unsure.
-
-- **JSON is the default output** of every herdr command. `--json` is NOT a
-  universal flag: it is accepted only by `herdr worktree *` and
-  `herdr agent explain`. Passing `--json` to `pane`/`tab`/`agent list|get|read`
-  fails with `unknown option` and empty stdout. Parse the default JSON; never
-  append `--json` to those groups.
-- **Empty stdout + nonzero exit is a bad flag/subcommand, not a race.** Never
-  retry-loop with sleeps — re-check `herdr <group> --help` and fix the command.
-- **Observe a pane:** `herdr pane read <pane_id> --source recent-unwrapped --lines N`
-  (or `herdr agent read <target> --source recent-unwrapped`). Plain text on
-  success; JSON `{code,message}` + nonzero on error. Never jq the success output.
-- **List panes:** `herdr pane list [--workspace ID]`. There is no `--tab`
-  filter — list all and filter on `.tab_id` client-side.
-- **Inspect a tab:** `herdr tab get <tab_id>`. There is no `tab show`.
-- **Status snapshot / block:** `herdr agent get <target>`; block until state
-  with `herdr agent wait <target> --status idle|working|blocked --timeout MS`.
-- **Launch an OMP agent:** get a pane, then `herdr pane run <pane_id> "omp --model <model>"`. herdr tracks it from pane content — `agent start` is optional. Prefer the `herdr-launch` / `herdr-worker` scripts.
-- **Submit a prompt to a running OMP:** `herdr pane run <pane_id> "<prompt>"`
-  (types text + Enter) for a SINGLE-LINE prompt. `pane run` would submit a
-  MULTI-LINE prompt at its first newline; for those, `herdr pane send-text
-  <pane> "<block>"` (bracketed paste — inserts without submitting) then
-  `herdr pane send-keys <pane> ENTER` once submits the whole block. `herdr-say`
-  auto-selects the right path by detecting newlines — prefer it over raw calls.
-  `herdr agent send` writes literal text WITHOUT Enter — never use it to submit.
-- **No leftover shell panes:** launch omp INTO an existing pane (the `tab create`
-  / `worktree create` root pane, or a fresh `pane split`) with
-  `herdr pane run <pane> "omp ..."`. Do not `agent start --tab`, which adds a
-  second pane beside the root. `herdr-launch` / `herdr-worker` already do this.
+Raw herdr CLI fallback reference: `skill://herdr-orchestration/references/cli.md`
 
 ## Sentinels
 
@@ -114,9 +75,6 @@ classify on these exact strings:
 - `WORKER <ID> DONE: <sha>` — slice complete at the given commit.
 - `NEEDS-INPUT <ID> — <question>` — a decision is required.
 - `BLOCKER <ID> — <what>` — progress is blocked.
-
-Never treat a worker's `completed` process status as a sentinel — require the
-sentinel plus push evidence, integration, and passing tests.
 
 ## Hard rules
 - Admin never edits source files.

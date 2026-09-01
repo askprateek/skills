@@ -23,10 +23,8 @@ S=<skill-root>/scripts
 ```
 
 `herdr-worker` prints `PANE=… WORKSPACE=… TAB=… BRANCH=… CWD=…` — capture the
-pane id, and verify `CWD=` points inside the intended repo. The `<repo-path>`
-is a REQUIRED positional — `herdr worktree create` otherwise forks herdr's
-active project, not the shell cwd, and silently makes the worktree in the wrong
-repo. A missing/wrong repo errors loud instead of guessing. Never run bare
+pane id, and verify `CWD=` points inside the intended repo. `<repo-path>` is a
+REQUIRED positional (see root skill Hard rules for why). Never run bare
 `herdr worktree create` without all required arguments; herdr immediately
 creates random branch/worktree names. Never use `herdr agent start` inside a
 worker worktree tab.
