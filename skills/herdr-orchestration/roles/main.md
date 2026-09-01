@@ -36,8 +36,9 @@ S=<skill-root>/scripts
 ```
 
 `herdr-launch` prints `PANE=… TAB=…` — capture the pane id. `<repo-path>` is a
-REQUIRED positional (Admin's cwd); `--beside <main-pane>` splits Main's OWN pane
-id rightward (`herdr pane split` takes a pane id, never a tab id). A freshly
+REQUIRED positional (Admin's cwd; see root skill Hard rules for why);
+`--beside <main-pane>` splits Main's OWN pane id rightward (`herdr pane split`
+takes a pane id, never a tab id). A freshly
 launched pane is blank; deliver Admin's bootstrap prompt into it:
 
 ```bash

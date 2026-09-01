@@ -22,7 +22,7 @@ npx skills add askprateek/skills/<skill-name>
 
 | Skill | Description |
 | --- | --- |
-| [`herdr-orchestration`](skills/herdr-orchestration/SKILL.md) | Standard operating procedure for orchestrating multiple AI agents in parallel through herdr: Main/Admin/Worker/Checker hierarchy, worktree/pane spawning, and parallel implementation waves. |
+| [`herdr-orchestration`](skills/herdr-orchestration/SKILL.md) | Orchestrate multiple AI agents in parallel through herdr: Main/Admin/Worker/Checker hierarchy, worktree/pane spawning, and parallel implementation waves. |
 
 <!-- Add new rows above this line as skills are added. -->
 
