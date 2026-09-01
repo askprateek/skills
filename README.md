@@ -1,8 +1,8 @@
-# skills
+# askprateek/skills — Battle-Tested Agent Skills
 
 [![skills.sh](https://skills.sh/badge/askprateek/skills)](https://skills.sh/askprateek/skills)
 
-A public, MIT-licensed collection of [Agent Skills](https://agentskills.io) — modular, model-invoked capabilities for AI coding agents. This repo follows the open Agent Skills standard and the [vercel-labs/skills](https://github.com/vercel-labs/skills) installer convention: every skill lives at `skills/<name>/SKILL.md`.
+My personal collection of [Agent Skills](https://agentskills.io) — workflows I build and use daily, released as install-ready skills for AI coding agents. New skills land regularly: multi-agent orchestration, automation loops, and more. Works with Claude Code, Codex, Cursor, and 70+ agents via one npx skills command.
 
 ## Install
 
@@ -18,13 +18,19 @@ Install a single skill:
 npx skills add askprateek/skills/<skill-name>
 ```
 
-## Catalog
+## Skills
 
-| Skill | Description |
-| --- | --- |
-| [`herdr-orchestration`](skills/herdr-orchestration/SKILL.md) | Orchestrate multiple AI agents in parallel through herdr: Main/Admin/Worker/Checker hierarchy, worktree/pane spawning, and parallel implementation waves. |
+### herdr-orchestration
 
-<!-- Add new rows above this line as skills are added. -->
+Orchestrate multiple AI agents in parallel through herdr for multi-worker or multi-file coding tasks, parallel implementation waves, and isolated worktrees.
+
+**What you get:** the full Main → Admin → Worker → Checker hierarchy, skill-local `herdr-*` wrapper scripts for worktree/pane orchestration, the three-sentinel vocabulary workers use to report status, and the hard rules that keep multi-agent runs safe (no merges to main without approval, no blocking waits, checker-verified completion).
+
+```bash
+npx skills add askprateek/skills/herdr-orchestration
+```
+
+[Full docs →](skills/herdr-orchestration/SKILL.md)
 
 ## Repo layout
 
