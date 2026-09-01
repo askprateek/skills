@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# herdr-panes — list panes as a compact table (the listing that kept biting us).
+#
+# Usage: herdr-panes [tab_id|workspace_id]
+#   no arg     list every pane
+#   w18:tD     filter to one tab      (matched on .tab_id)
+#   w18        filter to one workspace (matched on .workspace_id)
+#
+# Columns: PANE  TAB  AGENT  STATUS  FOCUS  TITLE
+# `pane list` has NO --tab / --workspace-scoped filter for output and emits JSON
+# by default (passing --json errors), so we filter client-side with jq.
+set -euo pipefail
+
+die() { echo "herdr-panes: $*" >&2; exit 1; }
+command -v herdr >/dev/null 2>&1 || die "herdr not on PATH"
+command -v jq    >/dev/null 2>&1 || die "jq not on PATH"
+
+filter=${1:-}
+out=$(herdr pane list 2>&1) || die "pane list failed: $out"
+
+printf '%s' "$out" | jq -r --arg f "$filter" '
+  .result.panes
+  | map(select($f == "" or .tab_id == $f or .workspace_id == $f))
+  | (["PANE","TAB","AGENT","STATUS","FOCUS","TITLE"]),
+    (.[] | [
+       .pane_id,
+       .tab_id,
+       (.agent // "-"),
+       (.agent_status // "-"),
+       (if .focused then "*" else "-" end),
+       (.terminal_title_stripped // "")
+    ])
+  | @tsv
+' | column -t -s "$(printf '\t')"

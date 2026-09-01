@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# herdr-await — block until a pane's agent is idle, then print its recent output.
+#
+# Merges the ubiquitous two-call idiom
+#     herdr agent wait <pane> --status idle --timeout <ms>
+#     herdr pane read <pane> --source recent-unwrapped --lines <N>
+# into one call, so observers stop hand-rolling wait+read and busy-polling with
+# repeated `pane list`/`pane read`. Block on the event, then look once.
+# Usage: herdr-await <pane_id> <lines> <timeout_s>
+#   pane_id     pane whose agent to wait on
+#   lines       tail length to print after idle (REQUIRED)
+#   timeout_s   seconds to wait for idle (REQUIRED)
+#
+# All three arguments are REQUIRED and positional — no defaults. A short call
+# errors loudly instead of guessing a wait window.
+#
+# Prints the pane's recent-unwrapped text on success (agent reached idle).
+# On timeout or error: message on stderr, nonzero exit. Never silent.
+# NOTE: this is for observing a DOWNSTREAM agent you dispatched work to
+# (e.g. Admin waiting on a worker/checker). Main MUST NOT use it to wait on
+# Admin — Main never blocks; Admin wakes Main by writing into Main's pane.
+set -euo pipefail
+
+die() { echo "herdr-await: $*" >&2; exit 1; }
+command -v herdr >/dev/null 2>&1 || die "herdr not on PATH"
+
+[ "$#" -eq 3 ] || die "usage: herdr-await <pane_id> <lines> <timeout_s>"
+pane=$1 lines=$2 timeout_s=$3
+
+ms=$(( timeout_s * 1000 ))
+if ! herdr agent wait "$pane" --status idle --timeout "$ms" >/dev/null 2>&1; then
+  die "agent on $pane did not reach idle within ${timeout_s}s (or wait failed)"
+fi
+
+if ! out=$(herdr pane read "$pane" --source recent-unwrapped --lines "$lines" 2>&1); then
+  die "pane read of $pane failed: $out"
+fi
+printf '%s\n' "$out"

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# herdr-watch — read the recent (unwrapped) output of an agent pane.
+#
+# Usage: herdr-watch <pane_id> <lines>
+#   pane_id  pane to observe
+#   lines    tail length (REQUIRED — no default)
+#
+# Prints the pane's recent-unwrapped text to stdout. `pane read` emits plain
+# text on success (exit 0); on error it prints a JSON {code,message} and exits
+# nonzero. `recent-unwrapped` is the right source for an agent transcript.
+set -euo pipefail
+
+die() { echo "herdr-watch: $*" >&2; exit 1; }
+command -v herdr >/dev/null 2>&1 || die "herdr not on PATH"
+
+[ "$#" -eq 2 ] || die "usage: herdr-watch <pane_id> <lines>"
+pane=$1 lines=$2
+
+if ! out=$(herdr pane read "$pane" --source recent-unwrapped --lines "$lines" 2>&1); then
+  die "pane read of $pane failed: $out"
+fi
+printf '%s\n' "$out"

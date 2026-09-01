@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# herdr-launch — launch an OMP agent in a pane (Admin, or any non-worktree agent).
+#
+# Usage: herdr-launch <model> <cwd> [--beside <pane_id>] [--label <text>]
+#   model        OMP model id (REQUIRED, positional)
+#   cwd          working directory for the agent (REQUIRED, positional).
+#                Set it to the target repo so worktrees/commands run there.
+#                No default: a missing cwd errors instead of launching the
+#                agent in whatever directory herdr happens to pick.
+#   --beside PANE  split THIS pane rightward and launch the agent in the new
+#                pane (e.g. put Admin beside Main by splitting Main's pane).
+#                `herdr pane split` takes a PANE id, never a tab id. Omit →
+#                fresh tab.
+#   --label TEXT name the agent tab (fresh-tab path) or pane (--beside path)
+#                for the human observer. Applied at CREATION where possible.
+#
+# With no --beside, creates a fresh tab pinned to the target repo's OWN herdr
+# workspace (derived from $cwd) and launches OMP in its root pane — so review
+# workers land under the project, never in the caller's workspace, and no empty
+# shell pane is left behind. If the repo has no open workspace, the tab is
+# created unpinned.
+#
+# Prints on success:  PANE=<pane_id> TAB=<tab_id>
+# On any error: message on stderr, nonzero exit. Never silent.
+#
+# No `agent start`: herdr tracks the agent from pane content once omp runs, so a
+# plain pane + `pane run "omp …"` is fully observable via `herdr agent read`.
+set -euo pipefail
+
+die() { echo "herdr-launch: $*" >&2; exit 1; }
+command -v herdr >/dev/null 2>&1 || die "herdr not on PATH"
+command -v jq    >/dev/null 2>&1 || die "jq not on PATH"
+
+beside="" label=""
+[ "$#" -ge 2 ] || die "usage: herdr-launch <model> <cwd> [--beside <pane_id>] [--label <text>]"
+model=$1 cwd=$2; shift 2
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --beside) beside=${2:-}; shift 2 || die "--beside needs a pane id" ;;
+    --label)  label=${2:-};  shift 2 || die "--label needs a value" ;;
+    *) die "unknown arg: $1" ;;
+  esac
+done
+[ -n "$model" ] || die "model is required"
+[ -d "$cwd" ] || die "cwd path does not exist: $cwd"
+
+if [ -n "$beside" ]; then
+  # Split the given PANE rightward; the new pane INHERITS the sibling's
+  # workspace (correct: an Admin launched beside Main belongs in Main's
+  # orchestration workspace, not a project workspace). `pane split` takes a
+  # pane id, not a tab id. NOTE: pane/tab commands reject --json (JSON default).
+  out=$(herdr pane split "$beside" --direction right --no-focus --cwd "$cwd" 2>&1) \
+    || die "pane split of $beside failed: $out"
+  pane=$(printf '%s' "$out" | jq -r '.result.pane.pane_id // empty')
+  [ -n "$pane" ] || die "could not parse new pane id from: $out"
+  # New pane shares the source pane's tab; resolve it for the caller.
+  tabid=$(herdr pane get "$pane" 2>&1 | jq -r '.result.pane.tab_id // empty')
+  # A split shares its sibling's tab (no separate tab label to set), so name the
+  # pane itself for the observer.
+  [ -n "$label" ] && herdr pane rename "$pane" "$label" >/dev/null 2>&1 || true
+else
+  # Fresh tab. Pin it to the target repo's OWN workspace so the agent shows up
+  # under the project — not under whatever workspace the caller happens to be in
+  # (that leak put review workers in the orchestration workspace). Derive the
+  # project workspace from the repo at $cwd; if the repo has no open workspace
+  # (source null), create an unpinned tab. `--label` names the tab AT CREATION
+  # (atomic — no unnamed window, no follow-up rename).
+  tgt_ws=$(herdr worktree list --cwd "$cwd" --json 2>/dev/null \
+             | jq -r '.result.source.source_workspace_id // empty')
+  out=$(herdr tab create ${tgt_ws:+--workspace "$tgt_ws"} --cwd "$cwd" ${label:+--label "$label"} --no-focus 2>&1) \
+    || die "tab create failed: $out"
+  pane=$(printf  '%s' "$out" | jq -r '.result.root_pane.pane_id // empty')
+  tabid=$(printf '%s' "$out" | jq -r '.result.tab.tab_id // empty')
+  [ -n "$pane" ] || die "could not parse new pane id from: $out"
+fi
+
+herdr pane run "$pane" "omp --model $model" >/dev/null 2>&1 \
+  || die "failed to launch omp in $pane"
+
+echo "PANE=$pane TAB=$tabid"

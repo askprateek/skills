@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# herdr-say — submit a prompt to a running OMP agent in a pane.
+#
+# Usage: herdr-say <pane_id> <prompt...>
+#
+# Single-line prompt: uses `pane run` (types the text AND presses Enter, so the
+# prompt is submitted in one shot).
+#
+# Multi-line prompt (any embedded newline): `pane run` would press Enter at the
+# FIRST newline and submit a truncated prompt. Instead we `pane send-text`
+# (bracketed paste — inserts the whole block into the input box WITHOUT
+# submitting), then `pane send-keys ENTER` ONCE to submit the entire block as a
+# single prompt. Verified empirically against a live omp pane.
+#
+# Do NOT use `herdr agent send` for prompts — it writes literal text WITHOUT
+# Enter, so the prompt just sits in the input box unsent.
+set -euo pipefail
+
+die() { echo "herdr-say: $*" >&2; exit 1; }
+command -v herdr >/dev/null 2>&1 || die "herdr not on PATH"
+
+[ "$#" -ge 2 ] || die "usage: herdr-say <pane_id> <prompt...>"
+pane=$1; shift
+prompt=$*
+
+case "$prompt" in
+  *$'\n'*)
+    # Multi-line: paste the whole block (no submit), then submit once.
+    herdr pane send-text "$pane" "$prompt" >/dev/null 2>&1 \
+      || die "send-text failed to $pane"
+    herdr pane send-keys "$pane" ENTER >/dev/null 2>&1 \
+      || die "send-keys ENTER failed to $pane"
+    ;;
+  *)
+    # Single-line: type + Enter in one shot.
+    herdr pane run "$pane" "$prompt" >/dev/null 2>&1 \
+      || die "failed to submit prompt to $pane"
+    ;;
+esac
+
+echo "SENT pane=$pane"

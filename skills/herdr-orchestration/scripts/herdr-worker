@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# herdr-worker — create an isolated worktree and launch an OMP worker in it,
+# consolidated as a tab under the target repo's project workspace.
+#
+# Usage: herdr-worker <branch> <base> <label> <model> <repo>
+#   branch  new worker branch name (deterministic — never leave to herdr)
+#   base    branch/ref to fork from (e.g. the integration branch)
+#   label   worker name — becomes the TAB label under the project workspace
+#           (or the fresh worktree workspace's label if the project repo has
+#           no open workspace to consolidate into)
+#   model   OMP model id for the worker (e.g. anthropic/claude-haiku-4-5)
+#   repo    path INSIDE the target repo to fork from. REQUIRED, no default.
+#           `herdr worktree create` otherwise picks the repo from herdr's
+#           active-project context (NOT the shell cwd) and silently forks the
+#           WRONG repo. Requiring it explicitly is what makes this a closed
+#           system: a short/missing call errors loudly instead of guessing.
+#
+# All five arguments are REQUIRED and positional. Wrong count → loud error,
+# nonzero exit, nothing created.
+#
+# Prints one machine-parseable line on success:
+#   PANE=<pane_id> WORKSPACE=<ws_id> TAB=<tab_id> BRANCH=<branch> CWD=<path>
+# On any error: message on stderr, nonzero exit. Never silent.
+set -euo pipefail
+
+die() { echo "herdr-worker: $*" >&2; exit 1; }
+command -v herdr >/dev/null 2>&1 || die "herdr not on PATH"
+command -v jq    >/dev/null 2>&1 || die "jq not on PATH"
+
+[ "$#" -eq 5 ] || die "usage: herdr-worker <branch> <base> <label> <model> <repo>"
+branch=$1 base=$2 label=$3 model=$4 repo=$5
+[ -d "$repo" ] || die "repo path does not exist: $repo"
+
+# worktree create DOES accept --json (worktree + agent explain are the only
+# groups that do; pane/tab/agent-list emit JSON by default and reject --json).
+# --cwd pins the repo to fork; without it herdr forks its active project.
+out=$(herdr worktree create --cwd "$repo" --branch "$branch" --base "$base" --label "$label" --no-focus --json 2>&1) \
+  || die "worktree create failed: $out"
+
+pane=$(printf '%s' "$out" | jq -r '.result.root_pane.pane_id // empty')
+ws=$(printf   '%s' "$out" | jq -r '.result.workspace.workspace_id // empty')
+tab=$(printf  '%s' "$out" | jq -r '.result.root_pane.tab_id // empty')
+cwd=$(printf  '%s' "$out" | jq -r '.result.root_pane.cwd // empty')
+[ -n "$pane" ] || die "could not parse root_pane.pane_id from: $out"
+
+# Consolidate the worker under the PROJECT's workspace instead of leaving it in
+# the throwaway per-worktree workspace `worktree create` just spawned (that
+# scattering is what put workers outside the project's window). `pane move
+# --new-tab` relocates the root pane into the project ws as its OWN tab, sets
+# the tab label AT the move, PRESERVES the worktree cwd, and auto-closes the
+# now-empty source workspace. Derive the project ws from $repo; if the repo has
+# no open workspace, skip the move and leave the worker in its labeled fresh ws.
+# NOTE: pane ids are RENUMBERED on move — re-read every id from the move result.
+tgt_ws=$(herdr worktree list --cwd "$repo" --json 2>/dev/null \
+           | jq -r '.result.source.source_workspace_id // empty')
+if [ -n "$tgt_ws" ] && [ "$tgt_ws" != "$ws" ]; then
+  mv=$(herdr pane move "$pane" --new-tab --workspace "$tgt_ws" --label "$label" 2>&1) \
+    || die "worktree created ($ws) but pane move into $tgt_ws failed: $mv"
+  pane=$(printf '%s' "$mv" | jq -r '.result.move_result.pane.pane_id // empty')
+  ws=$(printf   '%s' "$mv" | jq -r '.result.move_result.pane.workspace_id // empty')
+  tab=$(printf  '%s' "$mv" | jq -r '.result.move_result.pane.tab_id // empty')
+  cwd=$(printf  '%s' "$mv" | jq -r '.result.move_result.pane.cwd // empty')
+  [ -n "$pane" ] || die "could not parse moved pane id from: $mv"
+fi
+
+# Launch OMP in the worktree's root pane. `pane run` types the command + Enter;
+# herdr auto-detects the agent from pane content — no `agent start` needed.
+herdr pane run "$pane" "omp --model $model" >/dev/null 2>&1 \
+  || die "worktree created ($ws) but launching omp in $pane failed"
+
+echo "PANE=$pane WORKSPACE=$ws TAB=$tab BRANCH=$branch CWD=$cwd"
