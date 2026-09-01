@@ -31,8 +31,9 @@ Skill-local wrappers live in `scripts/` next to this file. Each fails loud
 (clear message + nonzero exit, never silent empty output) and prints a
 machine-parseable last line. Call by the skill's own absolute path so any
 agent can use them even without loading this skill — resolve `<skill-root>`
-to wherever this skill is installed (e.g. `skills/herdr-orchestration` in a
-checkout, or a managed-skills install path) and set:
+to the directory containing the `SKILL.md` you are reading (install location
+varies: `skills/herdr-orchestration` in a checkout, a managed-skills path,
+etc. — never assume a fixed path like `~/.omp/agent/skills/…`) and set:
 
 ```bash
 S=<skill-root>/scripts
