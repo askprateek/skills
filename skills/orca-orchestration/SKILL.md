@@ -6,10 +6,11 @@ description: Orchestrate multiple AI agents in parallel through Orca using a non
 # Orca Orchestration (non-blocking, role-assigned)
 
 Spawn multi-worker implementations, parallel waves, isolated branches, or
-coordinate OMP agents through Orca. For plain ownership transfer ("hand off",
-"give this to another agent/worktree") use `skill://orca-cli`, not this skill.
+coordinate OMP agents through Orca. For plain ownership handoff of a
+worktree to another agent, use the orca CLI directly; this skill is for
+supervised multi-agent orchestration.
 
-Orca parallel to `skill://herdr-orchestration`. Hierarchy and discipline identical;
+Strict role hierarchy with disciplined non-blocking coordination;
 primitives: Run/Task/Dispatch. Non-blocking SOP: Main/Admin never run `check --wait`.
 Admin detects completion via background sonic Checkers reading worker sentinels,
 reconciles bus with non-blocking `check` (no `--wait`).
@@ -143,7 +144,7 @@ Rules that follow:
 - Never merge to main without explicit user approval (draft PR + review first).
 - Never remove worktree before commits pushed + integrated.
 - Always copy full worktree/terminal/dispatch ids from `--json`; never construct by hand.
-- Never edit herdr/orca internal state files.
+- Never edit Orca internal state files.
 
 ---
 
